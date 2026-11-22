@@ -80,6 +80,7 @@ import com.example.ui.screens.ProfileScreen
 import com.example.ui.theme.NutriPulseTheme
 import com.example.ui.viewmodel.NutriPulseViewModel
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -118,11 +119,20 @@ private fun AppRoot() {
         context.getSharedPreferences("nutripulse_prefs", Context.MODE_PRIVATE)
     }
 
-    var currentUser by remember { mutableStateOf(Firebase.auth.currentUser) }
-    var isGuestMode by remember { mutableStateOf(prefs.getBoolean("guest_mode", false)) }
+    val isFirebaseReady = remember(context) { FirebaseApp.getApps(context).isNotEmpty() }
+
+    var currentUser by remember {
+        mutableStateOf(if (isFirebaseReady) Firebase.auth.currentUser else null)
+    }
+    var isGuestMode by remember {
+        mutableStateOf(!isFirebaseReady || prefs.getBoolean("guest_mode", false))
+    }
     var themeMode by remember { mutableStateOf(ThemeMode.SYSTEM) }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(isFirebaseReady) {
+        if (!isFirebaseReady) {
+            return@DisposableEffect onDispose {}
+        }
         val listener = FirebaseAuth.AuthStateListener { auth ->
             currentUser = auth.currentUser
             if (auth.currentUser != null) {
@@ -134,8 +144,8 @@ private fun AppRoot() {
         onDispose { Firebase.auth.removeAuthStateListener(listener) }
     }
 
-    LaunchedEffect(Unit) {
-        if (currentUser == null && !isGuestMode) {
+    LaunchedEffect(isFirebaseReady) {
+        if (isFirebaseReady && currentUser == null && !isGuestMode) {
             attemptAutoSignIn(
                 context = context,
                 credentialManager = credentialManager,
