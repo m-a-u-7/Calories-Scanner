@@ -1,0 +1,6 @@
+{
+  "name": "NutriPulse AI",
+  "description": "AI Calorie Tracker & Smart Weight Management App with Gemini food photo scanning, natural language meal logging, BMR/TDEE & macro engine, exercise & water tracking, and progress analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

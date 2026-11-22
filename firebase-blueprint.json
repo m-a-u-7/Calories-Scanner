@@ -1,0 +1,182 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User biometric profile, BMR/TDEE calculations, macro targets, and reminder preferences.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated Firebase UID" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "age": { "type": "integer", "description": "Age in years (13-120)" },
+        "gender": { "type": "string", "enum": ["MALE", "FEMALE", "OTHER"] },
+        "heightCm": { "type": "number", "description": "Height in centimeters" },
+        "currentWeightKg": { "type": "number", "description": "Current weight in kilograms" },
+        "targetWeightKg": { "type": "number", "description": "Target weight in kilograms" },
+        "activityLevel": {
+          "type": "string",
+          "enum": ["SEDENTARY", "LIGHTLY_ACTIVE", "MODERATELY_ACTIVE", "VERY_ACTIVE"]
+        },
+        "goalType": { "type": "string", "enum": ["LOSS", "MAINTAIN", "GAIN"] },
+        "weeklyRateKg": { "type": "number", "description": "Weekly weight change goal in kg" },
+        "bmr": { "type": "integer", "description": "Basal Metabolic Rate in kcal" },
+        "tdee": { "type": "integer", "description": "Total Daily Energy Expenditure in kcal" },
+        "dailyCalorieTarget": { "type": "integer", "description": "Target daily calorie intake" },
+        "proteinTargetG": { "type": "integer", "description": "Daily protein target in grams" },
+        "carbsTargetG": { "type": "integer", "description": "Daily carbs target in grams" },
+        "fatTargetG": { "type": "integer", "description": "Daily fat target in grams" },
+        "waterTargetMl": { "type": "integer", "description": "Daily water target in milliliters" },
+        "mealReminderEnabled": { "type": "boolean" },
+        "waterReminderEnabled": { "type": "boolean" },
+        "weightReminderEnabled": { "type": "boolean" },
+        "onboardingDone": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": [
+        "userId", "displayName", "age", "gender", "heightCm", "currentWeightKg",
+        "targetWeightKg", "activityLevel", "goalType", "weeklyRateKg", "bmr", "tdee",
+        "dailyCalorieTarget", "proteinTargetG", "carbsTargetG", "fatTargetG",
+        "waterTargetMl", "mealReminderEnabled", "waterReminderEnabled",
+        "weightReminderEnabled", "onboardingDone", "createdAt", "updatedAt"
+      ]
+    },
+    "FoodLog": {
+      "title": "FoodLog",
+      "description": "Logged meal item with calories, macros, portion units, and source.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "dateKey": { "type": "string", "description": "Date in yyyy-MM-dd format" },
+        "mealType": { "type": "string", "enum": ["BREAKFAST", "LUNCH", "DINNER", "SNACKS"] },
+        "name": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "grams": { "type": "number" },
+        "calories": { "type": "integer" },
+        "proteinG": { "type": "number" },
+        "carbsG": { "type": "number" },
+        "fatG": { "type": "number" },
+        "fiberG": { "type": "number" },
+        "vitaminAMcg": { "type": "number" },
+        "vitaminCMg": { "type": "number" },
+        "vitaminDMcg": { "type": "number" },
+        "vitaminEMg": { "type": "number" },
+        "vitaminB6Mg": { "type": "number" },
+        "vitaminB12Mcg": { "type": "number" },
+        "source": { "type": "string", "enum": ["AI_CAMERA", "AI_TEXT", "MANUAL", "FAVORITE"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "dateKey", "mealType", "name", "quantity", "unit", "grams",
+        "calories", "proteinG", "carbsG", "fatG", "fiberG", "source", "createdAt", "updatedAt"
+      ]
+    },
+    "ExerciseLog": {
+      "title": "ExerciseLog",
+      "description": "Logged physical activity or workout with burned calories.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "dateKey": { "type": "string" },
+        "activityName": { "type": "string" },
+        "category": {
+          "type": "string",
+          "enum": ["WALKING", "RUNNING", "CYCLING", "SWIMMING", "GYM", "BODYWEIGHT", "YOGA", "CHORES", "CUSTOM"]
+        },
+        "intensity": { "type": "string", "enum": ["LIGHT", "MODERATE", "VIGOROUS"] },
+        "durationMinutes": { "type": "integer" },
+        "caloriesBurned": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "dateKey", "activityName", "category", "intensity",
+        "durationMinutes", "caloriesBurned", "createdAt", "updatedAt"
+      ]
+    },
+    "WaterLog": {
+      "title": "WaterLog",
+      "description": "Daily hydration intake record keyed by yyyy-MM-dd.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "dateKey": { "type": "string" },
+        "amountMl": { "type": "integer" },
+        "targetMl": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "dateKey", "amountMl", "targetMl", "createdAt", "updatedAt"]
+    },
+    "WeightLog": {
+      "title": "WeightLog",
+      "description": "Historical weight measurement entry.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "dateKey": { "type": "string" },
+        "weightKg": { "type": "number" },
+        "note": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "dateKey", "weightKg", "createdAt", "updatedAt"]
+    },
+    "FavoriteFood": {
+      "title": "FavoriteFood",
+      "description": "Saved quick-add favorite food or custom meal.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "defaultQuantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "grams": { "type": "number" },
+        "calories": { "type": "integer" },
+        "proteinG": { "type": "number" },
+        "carbsG": { "type": "number" },
+        "fatG": { "type": "number" },
+        "fiberG": { "type": "number" },
+        "vitaminAMcg": { "type": "number" },
+        "vitaminCMg": { "type": "number" },
+        "vitaminDMcg": { "type": "number" },
+        "vitaminEMg": { "type": "number" },
+        "vitaminB6Mg": { "type": "number" },
+        "vitaminB12Mcg": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "name", "defaultQuantity", "unit", "grams", "calories",
+        "proteinG", "carbsG", "fatG", "fiberG", "createdAt", "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Authenticated user profile and calorie/macro targets."
+    },
+    "/users/{userId}/food_logs/{logId}": {
+      "schema": { "$ref": "#/entities/FoodLog" },
+      "description": "User-scoped food diary entries."
+    },
+    "/users/{userId}/exercise_logs/{exerciseId}": {
+      "schema": { "$ref": "#/entities/ExerciseLog" },
+      "description": "User-scoped exercise and burned calorie logs."
+    },
+    "/users/{userId}/water_logs/{waterId}": {
+      "schema": { "$ref": "#/entities/WaterLog" },
+      "description": "User-scoped daily water intake logs."
+    },
+    "/users/{userId}/weight_logs/{weightId}": {
+      "schema": { "$ref": "#/entities/WeightLog" },
+      "description": "User-scoped weight tracking history."
+    },
+    "/users/{userId}/favorite_foods/{favId}": {
+      "schema": { "$ref": "#/entities/FavoriteFood" },
+      "description": "User-scoped favorite foods for one-tap logging."
+    }
+  }
+}

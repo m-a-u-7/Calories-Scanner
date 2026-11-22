@@ -1,0 +1,328 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable hardened primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidDateKey(dateKey) {
+      return dateKey is string && dateKey.size() == 10 && dateKey.matches('^\\d{4}-\\d{2}-\\d{2}$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity validators
+    function isValidUserProfile(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.displayName is string && data.displayName.size() <= 80 &&
+             data.age is int && data.age >= 13 && data.age <= 120 &&
+             data.gender in ['MALE', 'FEMALE', 'OTHER'] &&
+             data.heightCm is number && data.heightCm >= 80 && data.heightCm <= 250 &&
+             data.currentWeightKg is number && data.currentWeightKg >= 25 && data.currentWeightKg <= 300 &&
+             data.targetWeightKg is number && data.targetWeightKg >= 25 && data.targetWeightKg <= 300 &&
+             data.activityLevel in ['SEDENTARY', 'LIGHTLY_ACTIVE', 'MODERATELY_ACTIVE', 'VERY_ACTIVE'] &&
+             data.goalType in ['LOSS', 'MAINTAIN', 'GAIN'] &&
+             data.weeklyRateKg is number && data.weeklyRateKg >= 0 && data.weeklyRateKg <= 1.5 &&
+             data.bmr is int && data.bmr >= 500 && data.bmr <= 6000 &&
+             data.tdee is int && data.tdee >= 600 && data.tdee <= 10000 &&
+             data.dailyCalorieTarget is int && data.dailyCalorieTarget >= 800 && data.dailyCalorieTarget <= 10000 &&
+             data.proteinTargetG is int && data.proteinTargetG >= 20 && data.proteinTargetG <= 600 &&
+             data.carbsTargetG is int && data.carbsTargetG >= 20 && data.carbsTargetG <= 1000 &&
+             data.fatTargetG is int && data.fatTargetG >= 10 && data.fatTargetG <= 400 &&
+             data.waterTargetMl is int && data.waterTargetMl >= 1000 && data.waterTargetMl <= 8000 &&
+             data.mealReminderEnabled is bool &&
+             data.waterReminderEnabled is bool &&
+             data.weightReminderEnabled is bool &&
+             data.onboardingDone is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidFoodLog(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             isValidDateKey(data.dateKey) &&
+             data.mealType in ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACKS'] &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+             data.quantity is number && data.quantity > 0 && data.quantity <= 10000 &&
+             data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 30 &&
+             data.grams is number && data.grams >= 0 && data.grams <= 10000 &&
+             data.calories is int && data.calories >= 0 && data.calories <= 15000 &&
+             data.proteinG is number && data.proteinG >= 0 && data.proteinG <= 1000 &&
+             data.carbsG is number && data.carbsG >= 0 && data.carbsG <= 1500 &&
+             data.fatG is number && data.fatG >= 0 && data.fatG <= 1000 &&
+             data.fiberG is number && data.fiberG >= 0 && data.fiberG <= 500 &&
+             (!('vitaminAMcg' in data) || (data.vitaminAMcg is number && data.vitaminAMcg >= 0 && data.vitaminAMcg <= 50000)) &&
+             (!('vitaminCMg' in data) || (data.vitaminCMg is number && data.vitaminCMg >= 0 && data.vitaminCMg <= 10000)) &&
+             (!('vitaminDMcg' in data) || (data.vitaminDMcg is number && data.vitaminDMcg >= 0 && data.vitaminDMcg <= 2000)) &&
+             (!('vitaminEMg' in data) || (data.vitaminEMg is number && data.vitaminEMg >= 0 && data.vitaminEMg <= 2000)) &&
+             (!('vitaminB6Mg' in data) || (data.vitaminB6Mg is number && data.vitaminB6Mg >= 0 && data.vitaminB6Mg <= 500)) &&
+             (!('vitaminB12Mcg' in data) || (data.vitaminB12Mcg is number && data.vitaminB12Mcg >= 0 && data.vitaminB12Mcg <= 5000)) &&
+             data.source in ['AI_CAMERA', 'AI_TEXT', 'MANUAL', 'FAVORITE'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidExerciseLog(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             isValidDateKey(data.dateKey) &&
+             data.activityName is string && data.activityName.size() >= 1 && data.activityName.size() <= 100 &&
+             data.category in ['WALKING', 'RUNNING', 'CYCLING', 'SWIMMING', 'GYM', 'BODYWEIGHT', 'YOGA', 'CHORES', 'CUSTOM'] &&
+             data.intensity in ['LIGHT', 'MODERATE', 'VIGOROUS'] &&
+             data.durationMinutes is int && data.durationMinutes >= 1 && data.durationMinutes <= 720 &&
+             data.caloriesBurned is int && data.caloriesBurned >= 0 && data.caloriesBurned <= 10000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidWaterLog(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             isValidDateKey(data.dateKey) &&
+             data.amountMl is int && data.amountMl >= 0 && data.amountMl <= 20000 &&
+             data.targetMl is int && data.targetMl >= 500 && data.targetMl <= 10000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidWeightLog(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             isValidDateKey(data.dateKey) &&
+             data.weightKg is number && data.weightKg >= 25 && data.weightKg <= 300 &&
+             (!('note' in data) || (data.note is string && data.note.size() <= 200)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidFavoriteFood(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+             data.defaultQuantity is number && data.defaultQuantity > 0 && data.defaultQuantity <= 10000 &&
+             data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 30 &&
+             data.grams is number && data.grams >= 0 && data.grams <= 10000 &&
+             data.calories is int && data.calories >= 0 && data.calories <= 15000 &&
+             data.proteinG is number && data.proteinG >= 0 && data.proteinG <= 1000 &&
+             data.carbsG is number && data.carbsG >= 0 && data.carbsG <= 1500 &&
+             data.fatG is number && data.fatG >= 0 && data.fatG <= 1000 &&
+             data.fiberG is number && data.fiberG >= 0 && data.fiberG <= 500 &&
+             (!('vitaminAMcg' in data) || (data.vitaminAMcg is number && data.vitaminAMcg >= 0 && data.vitaminAMcg <= 50000)) &&
+             (!('vitaminCMg' in data) || (data.vitaminCMg is number && data.vitaminCMg >= 0 && data.vitaminCMg <= 10000)) &&
+             (!('vitaminDMcg' in data) || (data.vitaminDMcg is number && data.vitaminDMcg >= 0 && data.vitaminDMcg <= 2000)) &&
+             (!('vitaminEMg' in data) || (data.vitaminEMg is number && data.vitaminEMg >= 0 && data.vitaminEMg <= 2000)) &&
+             (!('vitaminB6Mg' in data) || (data.vitaminB6Mg is number && data.vitaminB6Mg >= 0 && data.vitaminB6Mg <= 500)) &&
+             (!('vitaminB12Mcg' in data) || (data.vitaminB12Mcg is number && data.vitaminB12Mcg >= 0 && data.vitaminB12Mcg <= 5000)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // User profile document
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayName', 'age', 'gender', 'heightCm', 'currentWeightKg',
+                         'targetWeightKg', 'activityLevel', 'goalType', 'weeklyRateKg', 'bmr', 'tdee',
+                         'dailyCalorieTarget', 'proteinTargetG', 'carbsTargetG', 'fatTargetG',
+                         'waterTargetMl', 'mealReminderEnabled', 'waterReminderEnabled',
+                         'weightReminderEnabled', 'onboardingDone', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'age', 'gender', 'heightCm', 'currentWeightKg',
+                         'targetWeightKg', 'activityLevel', 'goalType', 'weeklyRateKg', 'bmr', 'tdee',
+                         'dailyCalorieTarget', 'proteinTargetG', 'carbsTargetG', 'fatTargetG',
+                         'waterTargetMl', 'mealReminderEnabled', 'waterReminderEnabled',
+                         'weightReminderEnabled', 'onboardingDone', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserProfile(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'age', 'gender', 'heightCm', 'currentWeightKg',
+                         'targetWeightKg', 'activityLevel', 'goalType', 'weeklyRateKg', 'bmr', 'tdee',
+                         'dailyCalorieTarget', 'proteinTargetG', 'carbsTargetG', 'fatTargetG',
+                         'waterTargetMl', 'mealReminderEnabled', 'waterReminderEnabled',
+                         'weightReminderEnabled', 'onboardingDone', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // Food logs subcollection
+      match /food_logs/{logId} {
+        allow get: if isOwner(userId) && isValidId(logId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(logId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'dateKey', 'mealType', 'name', 'quantity', 'unit', 'grams',
+                           'calories', 'proteinG', 'carbsG', 'fatG', 'fiberG', 'source', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'dateKey', 'mealType', 'name', 'quantity', 'unit', 'grams',
+                           'calories', 'proteinG', 'carbsG', 'fatG', 'fiberG',
+                           'vitaminAMcg', 'vitaminCMg', 'vitaminDMcg', 'vitaminEMg', 'vitaminB6Mg', 'vitaminB12Mcg',
+                           'source', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidFoodLog(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(logId) &&
+                         isValidFoodLog(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'dateKey', 'mealType', 'name', 'quantity', 'unit', 'grams',
+                           'calories', 'proteinG', 'carbsG', 'fatG', 'fiberG',
+                           'vitaminAMcg', 'vitaminCMg', 'vitaminDMcg', 'vitaminEMg', 'vitaminB6Mg', 'vitaminB12Mcg',
+                           'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(logId);
+      }
+
+      // Exercise logs subcollection
+      match /exercise_logs/{exerciseId} {
+        allow get: if isOwner(userId) && isValidId(exerciseId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(exerciseId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'dateKey', 'activityName', 'category', 'intensity',
+                           'durationMinutes', 'caloriesBurned', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'dateKey', 'activityName', 'category', 'intensity',
+                           'durationMinutes', 'caloriesBurned', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidExerciseLog(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(exerciseId) &&
+                         isValidExerciseLog(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'dateKey', 'activityName', 'category', 'intensity',
+                           'durationMinutes', 'caloriesBurned', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(exerciseId);
+      }
+
+      // Water logs subcollection
+      match /water_logs/{waterId} {
+        allow get: if isOwner(userId) && isValidId(waterId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(waterId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'dateKey', 'amountMl', 'targetMl', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'dateKey', 'amountMl', 'targetMl', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidWaterLog(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(waterId) &&
+                         isValidWaterLog(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'amountMl', 'targetMl', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(waterId);
+      }
+
+      // Weight logs subcollection
+      match /weight_logs/{weightId} {
+        allow get: if isOwner(userId) && isValidId(weightId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(weightId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'dateKey', 'weightKg', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'dateKey', 'weightKg', 'note', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidWeightLog(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(weightId) &&
+                         isValidWeightLog(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'dateKey', 'weightKg', 'note', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(weightId);
+      }
+
+      // Favorite foods subcollection
+      match /favorite_foods/{favId} {
+        allow get: if isOwner(userId) && isValidId(favId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(favId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'name', 'defaultQuantity', 'unit', 'grams', 'calories',
+                           'proteinG', 'carbsG', 'fatG', 'fiberG', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'name', 'defaultQuantity', 'unit', 'grams', 'calories',
+                           'proteinG', 'carbsG', 'fatG', 'fiberG',
+                           'vitaminAMcg', 'vitaminCMg', 'vitaminDMcg', 'vitaminEMg', 'vitaminB6Mg', 'vitaminB12Mcg',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidFavoriteFood(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(favId) &&
+                         isValidFavoriteFood(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'name', 'defaultQuantity', 'unit', 'grams', 'calories',
+                           'proteinG', 'carbsG', 'fatG', 'fiberG',
+                           'vitaminAMcg', 'vitaminCMg', 'vitaminDMcg', 'vitaminEMg', 'vitaminB6Mg', 'vitaminB12Mcg',
+                           'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(favId);
+      }
+    }
+  }
+}
